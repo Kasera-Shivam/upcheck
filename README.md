@@ -127,6 +127,6 @@ UpCheck/
 ### 1. Clone the Repository
 
 ```bash
-git clone [https://github.com/](https://github.com/)Kasera-Shivam/upcheck.git
-cd UpCheck
+git clone [https://github.com/Kasera-Shivam/upcheck.git](https://github.com/Kasera-Shivam/upcheck.git)
+cd upcheck
 ```
