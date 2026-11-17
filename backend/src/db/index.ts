@@ -1,0 +1,14 @@
+import env from "../config/env.config";
+import postgres from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
+import * as schema from "./schema";
+
+const client =
+  globalThis._postgresClient ??
+  postgres(env.DATABASE_URL, { max: env.NODE_ENV === "production" ? 10 : 1 });
+
+if (env.NODE_ENV !== "production") globalThis._postgresClient = client;
+
+const db = drizzle(client, { schema });
+
+export default db;
