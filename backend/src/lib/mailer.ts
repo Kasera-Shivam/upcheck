@@ -1,37 +1,32 @@
-import env from "../config/env.config";
-import nodemailer from "nodemailer";
-
-interface SendMailType {
+interface SendEmailOptions {
   to: string;
   subject: string;
   html: string;
-  text?: string;
-  from?: string;
 }
 
-const transport = nodemailer.createTransport({
-  host: env.SMTP_HOST,
-  port: env.SMTP_PORT,
-  secure: env.SMTP_PORT === 465,
-  auth: { user: env.SMTP_USER, pass: env.SMTP_PASS },
-  connectionTimeout: 10_000,
-  greetingTimeout: 10_000,
-  socketTimeout: 20_000,
-});
-
-export const sendMail = async ({
-  from,
-  to,
-  subject,
-  html,
-  text,
-}: SendMailType) => {
-  const result = await transport.sendMail({
-    from: from ?? env.SMTP_FROM,
-    to,
-    subject,
-    html,
-    text,
+export async function sendMail({ to, subject, html }: SendEmailOptions) {
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "api-key": process.env.BREVO_API_KEY!,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      sender: {
+        name: "UpCheck",
+        email: process.env.SENDER_EMAIL!,
+      },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    }),
   });
-  console.log("Mail sent successfully :", result.messageId);
-};
+
+  if (!res.ok) {
+    const errorData = await res.text();
+    throw new Error(`Email delivery failed: ${res.status} - ${errorData}`);
+  }
+
+  return res.json();
+}
