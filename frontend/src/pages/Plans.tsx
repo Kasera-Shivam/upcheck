@@ -25,6 +25,10 @@ export default function Plans() {
   }, []);
 
   const currentPlan = user?.plan;
+  const currentPlanDetails = plans.find((p) => p.id === currentPlan?.id);
+  const currentPrice =
+    currentPlan?.priceMonthly ?? currentPlanDetails?.priceMonthly ?? 0;
+
   const isCurrentValid =
     !!currentPlan &&
     (!currentPlan.currentPeriodEnd ||
@@ -101,10 +105,7 @@ export default function Plans() {
       <div className="plans">
         {plans.map((p) => {
           const isCurrent = isCurrentValid && currentPlan?.id === p.id;
-          const isLowerTier =
-            isCurrentValid &&
-            typeof currentPlan?.priceMonthly === "number" &&
-            p.priceMonthly < currentPlan.priceMonthly;
+          const isLowerTier = isCurrentValid && p.priceMonthly < currentPrice;
           const canUpgrade = !isCurrent && !isLowerTier && p.priceMonthly > 0;
 
           return (
