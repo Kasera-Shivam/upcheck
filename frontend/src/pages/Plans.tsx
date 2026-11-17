@@ -19,10 +19,30 @@ export default function Plans() {
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
   const [busy, setBusy] = useState("");
+
   useEffect(() => {
     api.get("/plan/list").then((r) => setPlans(r.data.plans));
   }, []);
+
+  const currentPlan = user?.plan;
+  const isCurrentValid =
+    !!currentPlan &&
+    (!currentPlan.currentPeriodEnd ||
+      new Date(currentPlan.currentPeriodEnd).getTime() > Date.now());
+
+  const remainingDays =
+    isCurrentValid && currentPlan?.currentPeriodEnd
+      ? Math.max(
+          0,
+          Math.ceil(
+            (new Date(currentPlan.currentPeriodEnd).getTime() - Date.now()) /
+              (1000 * 60 * 60 * 24),
+          ),
+        )
+      : 0;
+
   const upgrade = async (plan: any) => {
+    if (busy) return;
     setErr("");
     setOk("");
     setBusy(plan.id);
@@ -39,41 +59,58 @@ export default function Plans() {
         description: `${o.plan.name} plan, 30 days`,
         prefill: { name: user.name, email: user.email },
         handler: async (r: any) => {
+          setBusy(plan.id);
           try {
             await api.post("/plan/verify-payment", { planId: plan.id, ...r });
             await refresh();
-            setOk(`You are now on the ${plan.name} plan.`);
+            setOk(
+              remainingDays > 0
+                ? `You are now on the ${plan.name} plan (30 days + ${remainingDays} remaining days added).`
+                : `You are now on the ${plan.name} plan.`,
+            );
           } catch (x: any) {
             setErr(x.message);
+          } finally {
+            setBusy("");
           }
         },
         modal: { ondismiss: () => setBusy("") },
       }).open();
     } catch (x: any) {
       setErr(x.message);
-    } finally {
       setBusy("");
     }
   };
+
   const money = (p: any) =>
     p.priceMonthly ? `₹${p.priceMonthly.toLocaleString("en-IN")}` : "₹0";
+
   return (
     <>
       <div className="head">
         <div>
           <h2>Plans</h2>
-          <p className="muted">Each paid plan runs for 30 days from payment.</p>
+          <p className="muted">
+            Each paid plan adds 30 days (remaining paid days carry over on
+            upgrade).
+          </p>
         </div>
       </div>
       <Err msg={err} />
       {ok && <p className="ok">{ok}</p>}
       <div className="plans">
         {plans.map((p) => {
-          const current = user.plan?.id === p.id;
+          const isCurrent = isCurrentValid && currentPlan?.id === p.id;
+          const isLowerTier =
+            isCurrentValid &&
+            typeof currentPlan?.priceMonthly === "number" &&
+            p.priceMonthly < currentPlan.priceMonthly;
+          const canUpgrade = !isCurrent && !isLowerTier && p.priceMonthly > 0;
+
           return (
             <div
               key={p.id}
-              className={"panel plan" + (current ? " current" : "")}
+              className={"panel plan" + (isCurrent ? " current" : "")}
             >
               <h3>{p.name}</h3>
               <p className="price">
@@ -91,19 +128,25 @@ export default function Plans() {
                     : "Email alerts only"}
                 </li>
               </ul>
-              {current ? (
+              {isCurrent ? (
                 <p className="muted">
                   Current plan
-                  {user.plan.currentPeriodEnd &&
-                    ` · renews by ${new Date(user.plan.currentPeriodEnd).toLocaleDateString()}`}
+                  {currentPlan.currentPeriodEnd &&
+                    ` · ends ${new Date(currentPlan.currentPeriodEnd).toLocaleDateString()}`}
                 </p>
-              ) : p.priceMonthly > 0 ? (
+              ) : isLowerTier ? (
+                <p className="muted">Included in your current plan</p>
+              ) : canUpgrade ? (
                 <button
                   className="btn"
                   disabled={!!busy}
                   onClick={() => upgrade(p)}
                 >
-                  {busy === p.id ? "Opening…" : `Upgrade to ${p.name}`}
+                  {busy === p.id
+                    ? "Processing…"
+                    : remainingDays > 0
+                      ? `Upgrade to ${p.name} (+${remainingDays}d carry-over)`
+                      : `Upgrade to ${p.name}`}
                 </button>
               ) : null}
             </div>
