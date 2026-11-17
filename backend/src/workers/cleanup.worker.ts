@@ -18,12 +18,14 @@ const downgradeExpiredPlans = async (now: Date): Promise<number> => {
     .from(plans)
     .where(and(eq(plans.priceMonthly, 0), eq(plans.isActive, true)))
     .limit(1);
+
   if (!freePlan) {
     console.warn(
       "[CleanupWorker] Active Free plan not found; skipping plan downgrade.",
     );
     return 0;
   }
+
   const expiredSubscriptions = await db
     .select({
       id: userPlans.id,
@@ -33,12 +35,25 @@ const downgradeExpiredPlans = async (now: Date): Promise<number> => {
     .where(
       and(eq(userPlans.status, "active"), lte(userPlans.currentPeriodEnd, now)),
     );
+
+  let downgradedCount = 0;
+
   for (const sub of expiredSubscriptions) {
     await db.transaction(async (tx) => {
+      const [lockedSub] = await tx
+        .select()
+        .from(userPlans)
+        .where(and(eq(userPlans.id, sub.id), eq(userPlans.status, "active")))
+        .for("update")
+        .limit(1);
+
+      if (!lockedSub) return;
+
       await tx
         .update(userPlans)
         .set({ status: "expired" })
         .where(eq(userPlans.id, sub.id));
+
       await tx.insert(userPlans).values({
         userId: sub.userId,
         planId: freePlan.id,
@@ -46,6 +61,7 @@ const downgradeExpiredPlans = async (now: Date): Promise<number> => {
         currentPeriodStart: now,
         currentPeriodEnd: null,
       });
+
       await tx
         .update(monitors)
         .set({ intervalMinutes: freePlan.minIntervalMinutes })
@@ -55,11 +71,14 @@ const downgradeExpiredPlans = async (now: Date): Promise<number> => {
             lt(monitors.intervalMinutes, freePlan.minIntervalMinutes),
           ),
         );
-      if (!freePlan.webhookAlertsEnabled)
+
+      if (!freePlan.webhookAlertsEnabled) {
         await tx
           .update(monitors)
           .set({ webhookUrl: null })
           .where(eq(monitors.userId, sub.userId));
+      }
+
       const activeMonitors = await tx
         .select({ id: monitors.id })
         .from(monitors)
@@ -67,17 +86,23 @@ const downgradeExpiredPlans = async (now: Date): Promise<number> => {
           and(eq(monitors.userId, sub.userId), eq(monitors.isActive, true)),
         )
         .orderBy(asc(monitors.createdAt));
+
       const excessMonitorIds = activeMonitors
         .slice(freePlan.maxMonitors)
         .map((m) => m.id);
-      if (excessMonitorIds.length > 0)
+
+      if (excessMonitorIds.length > 0) {
         await tx
           .update(monitors)
           .set({ isActive: false, status: "paused" })
           .where(inArray(monitors.id, excessMonitorIds));
+      }
+
+      downgradedCount++;
     });
   }
-  return expiredSubscriptions.length;
+
+  return downgradedCount;
 };
 
 export const runDailyCleanup = async (): Promise<void> => {

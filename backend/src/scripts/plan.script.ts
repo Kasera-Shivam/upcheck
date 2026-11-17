@@ -19,7 +19,7 @@ export async function seedPlans() {
       name: "Pro",
       slug: "pro",
       description: "Built for growing startups and production APIs.",
-      priceMonthly: 49900, // ₹499.00
+      priceMonthly: 499, // ₹499.00
       currency: "INR" as const,
       maxMonitors: 15,
       minIntervalMinutes: 1,
@@ -31,7 +31,7 @@ export async function seedPlans() {
       name: "Scale",
       slug: "scale",
       description: "Maximum monitoring capacity for high-traffic applications.",
-      priceMonthly: 109900, // ₹1,099.00
+      priceMonthly: 1099, // ₹1,099.00
       currency: "INR" as const,
       maxMonitors: 50,
       minIntervalMinutes: 1,
