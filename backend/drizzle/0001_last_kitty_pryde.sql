@@ -1,0 +1,1 @@
+ALTER TABLE "ping_logs" ALTER COLUMN "response_time_ms" DROP NOT NULL;
