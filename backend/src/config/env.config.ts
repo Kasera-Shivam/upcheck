@@ -13,12 +13,8 @@ const envSchema = z.object({
   CLOUDINARY_API_SECRET: z.string().min(1),
   RAZORPAY_KEY_ID: z.string().min(1),
   RAZORPAY_KEY_SECRET: z.string().min(1),
-  SMTP_SERVICE: z.literal("gmail"),
-  SMTP_HOST: z.literal("smtp.gmail.com"),
-  SMTP_PORT: z.coerce.number().pipe(z.literal(465)).default(465),
-  SMTP_USER: z.email().min(1),
-  SMTP_PASS: z.string().min(1),
-  SMTP_FROM: z.string().min(1),
+  SENDER_EMAIL: z.email().min(1),
+  BREVO_API_KEY: z.string().min(1),
 });
 
 const parsed = envSchema.safeParse(process.env);
