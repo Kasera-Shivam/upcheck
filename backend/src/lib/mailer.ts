@@ -1,3 +1,5 @@
+import env from "../config/env.config";
+
 interface SendEmailOptions {
   to: string;
   subject: string;
@@ -9,21 +11,13 @@ export async function sendMail({ to, subject, html }: SendEmailOptions) {
     method: "POST",
     headers: {
       accept: "application/json",
-<<<<<<< Updated upstream
-      "api-key": process.env.BREVO_API_KEY!,
-=======
       "api-key": env.BREVO_API_KEY!,
->>>>>>> Stashed changes
       "content-type": "application/json",
     },
     body: JSON.stringify({
       sender: {
         name: "UpCheck",
-<<<<<<< Updated upstream
-        email: process.env.SENDER_EMAIL!,
-=======
         email: env.SENDER_EMAIL!,
->>>>>>> Stashed changes
       },
       to: [{ email: to }],
       subject,
