@@ -75,7 +75,7 @@ export const sendDownAlert = async (
     </div>
   `;
   const tasks: Promise<unknown>[] = [
-    sendMail({ to: monitor.alertEmail, subject, text, html }),
+    sendMail({ to: monitor.alertEmail, subject, html }),
   ];
   if (monitor.webhookUrl) {
     tasks.push(
@@ -86,7 +86,6 @@ export const sendDownAlert = async (
         monitor: {
           id: monitor.id,
           name: monitor.name,
-          slug: monitor.slug,
           url: monitor.url,
           method: monitor.method,
         },
@@ -145,12 +144,7 @@ export const sendRecoveryAlert = async (
     </div>
   `;
   const tasks: Promise<unknown>[] = [
-    sendMail({
-      to: monitor.alertEmail,
-      subject,
-      text,
-      html,
-    }),
+    sendMail({ to: monitor.alertEmail, subject, html }),
   ];
   if (monitor.webhookUrl)
     tasks.push(
@@ -161,7 +155,6 @@ export const sendRecoveryAlert = async (
         monitor: {
           id: monitor.id,
           name: monitor.name,
-          slug: monitor.slug,
           url: monitor.url,
           method: monitor.method,
         },
